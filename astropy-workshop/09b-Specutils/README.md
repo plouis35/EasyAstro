@@ -1,0 +1,3 @@
+### Specutils
+
+**Author**: Erik Tollerud

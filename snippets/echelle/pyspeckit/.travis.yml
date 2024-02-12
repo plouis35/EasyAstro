@@ -1,0 +1,109 @@
+language: c
+
+compiler: gcc
+
+# Setting sudo to false opts in to Travis-CI container-based builds.
+sudo: false
+
+os:
+    - linux
+
+# The apt packages below are needed for sphinx builds, which can no longer
+# be installed with sudo apt-get.
+addons:
+    apt:
+        packages:
+            - graphviz
+            - texlive-latex-extra
+            - dvipng
+
+# https://github.com/matplotlib/matplotlib/issues/5836#issuecomment-212052820
+cache:
+    directories:
+        - $HOME/.cache/matplotlib
+
+
+env:
+    global:
+        # The following versions are the 'default' for tests, unless
+        # overidden underneath. They are defined here in order to save having
+        # to repeat them for all configurations.
+        - NUMPY_VERSION=stable
+        - ASTROPY_VERSION=stable
+        - CONDA_DEPENDENCIES='matplotlib scipy spectral-cube lmfit'
+        - PIP_DEPENDENCIES='lineid-plot'
+        - SETUP_XVFB=True
+        - MPLBACKEND=TkAgg
+        - PYTHON_VERSION=3.6
+        - SETUP_CMD='test'
+
+    matrix:
+        # Make sure that egg_info works without dependencies
+        - SETUP_CMD='egg_info'
+        # Try all python versions with the latest numpy
+        - SETUP_CMD='test'
+
+matrix:
+    include:
+
+        # Check for sphinx doc build warnings - we do this first because it
+        # may run for a long time
+        # -wn is removed because I'm ignoring warnings
+        - env: SETUP_CMD='build_sphinx'
+               PYTHON_VERSION=3.6
+
+        - env: PYTHON_VERSION=2.7
+
+        - env: PYTHON_VERSION=3.6
+
+        - env: PYTHON_VERSION=3.7
+
+        # Try Astropy development version (which is no longer compatible with py2.7)
+        - env: ASTROPY_VERSION=development SETUP_CMD='test'
+               PIP_DEPENDENCIES='pytest-astropy'
+               PYTHON_VERSION=3.6
+
+        # try with recent versions of mpl
+        - env: ASTROPY_VERSION=development
+               SETUP_CMD='test'
+               NUMPY_VERSION=1.14
+               CONDA_DEPENDENCIES='matplotlib=2 scipy spectral-cube'
+               PIP_DEPENDENCIES='pytest-astropy'
+               PYTHON_VERSION=3.7
+
+        - env: ASTROPY_VERSION=development
+               SETUP_CMD='test'
+               NUMPY_VERSION=1.14
+               CONDA_DEPENDENCIES='matplotlib=2 scipy spectral-cube'
+               PIP_DEPENDENCIES='pytest-astropy'
+               PYTHON_VERSION=3.6
+
+        - env: ASTROPY_VERSION=development
+               SETUP_CMD='test'
+               CONDA_DEPENDENCIES='matplotlib=3 scipy spectral-cube'
+               PIP_DEPENDENCIES='matplotlib==3 pytest-astropy'
+               PYTHON_VERSION=3.6
+
+        # Try with optional dependencies disabled
+        - env: SETUP_CMD='test'
+               CONDA_DEPENDENCIES='matplotlib=1.5 scipy spectral-cube'
+               PIP_DEPENDENCIES=''
+               PYTHON_VERSION=2.7
+        - env: SETUP_CMD='test'
+               CONDA_DEPENDENCIES='matplotlib=1.5 scipy spectral-cube'
+               PIP_DEPENDENCIES=''
+               PYTHON_VERSION=3.6
+
+install:
+    - git clone git://github.com/astropy/ci-helpers.git
+    - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
+
+script:
+   #- python -c "import os; print('This is the line before setup_cmd: {0}'.format(os.getenv('SETUP_CMD')))"
+   - if [[ $CONDA_DEPENDENCIES = *"matplotlib"* && $SETUP_CMD == 'test' ]]; then python -c 'import matplotlib.pyplot'; fi # as recommended here https://github.com/matplotlib/matplotlib/issues/5836#issuecomment-212052820
+   - echo "This is the line before setup_cmd $SETUP_CMD"
+   - python setup.py $SETUP_CMD
+   # some extras for future use
+   # right now, run_tests is required
+   # but py.test works, kinda
+   - if [ $SETUP_CMD == 'test' ]; then py.test -x pyspeckit/spectrum/tests/test_units.py; fi
