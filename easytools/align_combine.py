@@ -9,8 +9,7 @@ import click
 import numpy as np
 from astropy.io import fits
 from scipy.signal import fftconvolve
-import logging
-logger = logging.getLogger(__name__)
+from logger_utils import logger
 
 def align_and_combine(infiles: list[str], operation) -> np:
     '''Read fits data from list of files, return aligned and operation(sum, median, etc...) version.
