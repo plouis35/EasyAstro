@@ -136,6 +136,8 @@ def get_reference_file_path(
         return None
 
     remote_url = f"{repo_url}/{repo_branch}/{repo_data_path}/{path}"
+    file_path = 'specreduce_data/reference_data/'+path
+    """ plouis PATCH
     try:
         file_path = download_file(
             remote_url,
@@ -143,11 +145,12 @@ def get_reference_file_path(
             show_progress=show_progress,
             pkgname='specreduce'
         )
+
     except Exception as e:
         msg = f"Downloading of {remote_url} failed: {e}"
         warnings.warn(msg, AstropyUserWarning)
         return None
-
+    """
     # final sanity check to make sure file_path is actually a file.
     if os.path.isfile(file_path):
         return file_path
