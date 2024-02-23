@@ -31,7 +31,8 @@ class FluxCalibration(SpecreduceOperation):
 
     """
 
-    def __call__(self, object_spectrum, airmass=1.00, zeropoint=48.60):
+#plouis    def __call__(self, object_spectrum, airmass=1.00, zeropoint=48.60):
+    def __init__(self, object_spectrum, airmass=1.00, zeropoint=48.60):
         self.object_spectrum = object_spectrum
         self.airmass = airmass
         self.zeropoint = zeropoint
@@ -61,8 +62,11 @@ class FluxCalibration(SpecreduceOperation):
         lamb = spec_in.spectral_axis
         mag = spec_in.flux
 
-        flux = (10.0**((mag + self.zeropt) / (-2.5))) * (cc.to('AA/s').value / lamb ** 2.0)
-        flux = flux * u.erg / u.s / u.angstrom / (u.cm * u.cm)
+        flux = mag    #plouis --> u.adu not cenvertible - keep it as is
+
+#plouis        flux = (10.0**((mag + self.zeropt) / (-2.5))) * (cc.to('AA/s').value / lamb ** 2.0)
+#plouis        flux = (10.0**((mag + self.zeropoint) / (-2.5))) * (cc.to('AA/s').value / lamb ** 2.0)
+#plouis        flux = flux * u.erg / u.s / u.angstrom / (u.cm * u.cm)
 
         spec_out = Spectrum1D(spectral_axis=lamb, flux=flux)
 
@@ -91,7 +95,8 @@ class FluxCalibration(SpecreduceOperation):
             raise ValueError('Must select an observatory extinction file.')
 
         dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                           'datasets', 'extinction')
+                           '../specreduce_data/reference_data', 'extinction')
+# plouis                          'datasets', 'extinction')
 
         if not os.path.isfile(os.path.join(dir, obs_file)):
             msg = "No valid standard star found at: " + os.path.join(dir, obs_file)
@@ -210,25 +215,33 @@ class FluxCalibration(SpecreduceOperation):
         obj_wave, obj_flux = spec.spectral_axis, spec.flux
 
         # Automatically exclude some lines b/c resolution dependent response
-        badlines = np.array(badlines, dtype='float')  # Balmer lines
+        badlines = np.array(badlines, dtype='float64')  # Balmer lines
 
         # Down-sample (ds) the observed flux to the standard's bins
-        obj_flux_ds = np.array([], dtype=np.float)
-        obj_wave_ds = np.array([], dtype=np.float)
-        std_flux_ds = np.array([], dtype=np.float)
-        for i in range(len(standard['flux'])):
-            rng = np.where((obj_wave.value >= standard['wave'][i] - standard['width'][i] / 2.0) &
-                           (obj_wave.value < standard['wave'][i] + standard['width'][i] / 2.0))[0]
 
-            IsH = np.where((badlines >= standard['wave'][i] - standard['width'][i] / 2.0) &
-                           (badlines < standard['wave'][i] + standard['width'][i] / 2.0))[0]
+        #plouis 
+        width = standard.wavelength[1] - standard.wavelength[0]
+        #obj_flux_ds = obj_flux.value
+        #obj_wave_ds = standard.wavelength.value
+        #std_flux_ds = standard.flux.value
+
+        obj_flux_ds = np.array([], dtype=np.float64)    # plouis --> float --> float64
+        obj_wave_ds = np.array([], dtype=np.float64)
+        std_flux_ds = np.array([], dtype=np.float64)
+        
+        for i in range(len(standard.flux)):
+            rng = np.where((obj_wave.value >= standard.wavelength[i].value - width.value) &     #- standard['width'][i] / 2.0) &
+                           (obj_wave.value < standard.wavelength[i].value + width.value))[0]   # + standard['width'][i] / 2.0))[0]
+
+            IsH = np.where((badlines >= standard.wavelength[i].value - width.value) &  # - standard['width'][i] / 2.0) &
+                           (badlines < standard.wavelength[i].value + width.value))[0] #+ standard['width'][i] / 2.0))[0]
 
             # Does this bin contain observed spectra, and no Balmer lines?
             if (len(rng) > 1) and (len(IsH) == 0):
                 obj_flux_ds = np.append(obj_flux_ds, np.nanmean(obj_flux.value[rng]))
-                obj_wave_ds = np.append(obj_wave_ds, standard['wave'][i])
-                std_flux_ds = np.append(std_flux_ds, standard['flux'][i])
-
+                obj_wave_ds = np.append(obj_wave_ds, standard.wavelength[i].value)
+                std_flux_ds = np.append(std_flux_ds, standard.flux[i].value)
+        
         # the ratio between the standard star catalog flux and observed flux
         ratio = np.abs(std_flux_ds / obj_flux_ds)
 
@@ -252,7 +265,7 @@ class FluxCalibration(SpecreduceOperation):
             fit = np.polyfit(obj_wave_ds, LogSensfunc, polydeg)
             sensfunc2 = np.polyval(fit, obj_wave.value)
 
-        sensfunc_out = (10 ** sensfunc2) * standard['flux'].unit / obj_flux.unit
+        sensfunc_out = (10 ** sensfunc2) * standard.flux.unit / obj_flux.unit
 
         sensfunc_spec = Spectrum1D(spectral_axis=obj_wave, flux=sensfunc_out)
 
@@ -302,9 +315,13 @@ class FluxCalibration(SpecreduceOperation):
         ss = np.argsort(obj_wave.value)
 
         # Interpolate the sensfunc onto the observed wavelength axis
-        sensfunc2 = np.interp(obj_wave.value, sensfunc['wave'][ss], sensfunc['S'][ss])
+        sensfunc2 = np.interp(obj_wave.value, sensfunc.wavelength.value, sensfunc.flux.value)
+        #sensfunc2 = np.interp(obj_wave.value, sensfunc_spec.wavelength.value[srt], sensfunc_spec.flux.value[srt])
+        #plouis sensfunc2 = np.interp(obj_wave.value, sensfunc.wavelength[ss], sensfunc['S'][ss])
+        
 
-        object_spectrum = obj_flux * (sensfunc2 * sensfunc['S'].unit)
+        #object_spectrum = obj_flux * (sensfunc2 * sensfunc['S'].unit)
+        object_spectrum = obj_flux * (sensfunc2 * sensfunc.unit)
 
         fluxcal_spec = Spectrum1D(spectral_axis=obj_wave, flux=object_spectrum)
 
