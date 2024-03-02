@@ -1,6 +1,0 @@
-numpy
-numpydoc
-matplotlib
-ordereddict
-astropy>=1.0
-spectral-cube
