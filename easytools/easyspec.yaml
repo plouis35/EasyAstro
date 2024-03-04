@@ -1,6 +1,6 @@
 global:
-    #root_path: '/Users/papa/Documents/ASTRO/CAPTURES/'
-    root_path: 'e:/ASTRO/CAPTURES/'
+    root_path: '/Users/papa/Documents/ASTRO/CAPTURES/'
+    #root_path: 'e:/ASTRO/CAPTURES/'
     #root_path: 'Z:\Documents\ASTRO\CAPTURES'
     log_level: 'INFO'
 
