@@ -16,6 +16,7 @@
   
 # References : 
 - astropy workshop from https://github.com/astropy/astropy-workshop
+- JWST data exploration : https://jwst-docs.stsci.edu/jwst-post-pipeline-data-analysis/data-analysis-example-jupyter-notebooks
 - python cookbook from https://github.com/ipython-books/cookbook-2nd
 - code snippets from https://prancer.physics.louisville.edu/classes/650/python/examples/
 - astro-datalab from https://datalab.noirlab.edu
