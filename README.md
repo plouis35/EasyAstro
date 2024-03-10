@@ -20,5 +20,3 @@
 - python cookbook from https://github.com/ipython-books/cookbook-2nd
 - code snippets from https://prancer.physics.louisville.edu/classes/650/python/examples/
 - astro-datalab from https://datalab.noirlab.edu
-
-
