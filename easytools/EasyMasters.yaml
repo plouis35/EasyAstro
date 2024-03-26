@@ -1,0 +1,20 @@
+global:
+    root_path: '/Users/papa/Documents/ASTRO/CAPTURES/'
+    #root_path: 'e:/ASTRO/CAPTURES/'
+    #root_path: 'Z:\Documents\ASTRO\CAPTURES'
+    log_level: 'INFO'
+
+viewer:
+    domain_low: 0
+    domain_high: 65535
+    level_low: 0
+    level_high: 65535
+    color_map: 'magma'
+
+preprocess:
+    master_bias: 'masterbias.fit'
+    master_dark: 'masterdark.fit'
+    master_flat: 'masterflat.fit'
+    master_prnu: 'masterprnu.fit'
+    master_calib: 'mastercalib.fit'
+    ppr_processed: '_ppr'
