@@ -1,10 +1,11 @@
-# EasyAstro : a set of python-based astronomy tools for amateurs:
-- easyreduce : reduce and analyse long-slit spectra (USABLE - CODE TO MOVE TO MODULES/CLASSES)
-- easyplan : display field-of-view and altitude of target (USABLE - CODE TO MOVE TO MODULES/CLASSES)
-- easyspec : analyse long-slit spectra (UNDER CONSTRUCTION - NOT USABLE)
-- easyphot : reduce and analyse variable stars (or exoplanet) time series (UNDER CONSTRUCTION - NOT USABLE)
-- easyimage : reduce and post-process astrophoto (NOT STARTED)
+(NOT USABLE - UNDER CONSTRUCTION)
 
+# EasyAstro : a set of astronomy python-based notebooks for amateurs:
+- easyviewer : generic FIT images viewer (NOT USABLE - UNDER CONSTRUCTION)
+- easyreduce : images preprocessing (NOT STARTED - DEMO ONLY)
+- easyplan : display info, field-of-view, altitude of target (USABLE - CODE TO MOVE TO MODULES/CLASSES)
+- easyspec : analyse long-slit spectra (NOT STARTED - DEMO ONLY)
+- easyphot : reduce and analyse variable stars (or exoplanet) time series (NOT STARTED - DEMO ONLY)
 
 # Installation:
 - install miniforge3 : https://github.com/conda-forge/miniforge 
