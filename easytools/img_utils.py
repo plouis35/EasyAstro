@@ -1,7 +1,7 @@
 #
-# os & files utilities
+# images utilities
 #
-import os, time, sys, configparser, threading, pathlib, re, fnmatch
+import os, time, sys, configparser, threading, pathlib, re, fnmatch, logging
 from logger_utils import logger
 import numpy as np
 from astropy.io import fits
@@ -78,7 +78,7 @@ class files_utils:
         else:
             return ("File type not supported : " + pathlib.Path(path).suffix)
             
-    def get_file_data(path: str = None) -> np:
+    def get_file_data(path: str = None) -> (int, np):
         """ 
         opens the path file - returns a numpy array containing image data - manages all supported image types
         """    
@@ -98,19 +98,22 @@ class files_utils:
                     logger.warning('NAXIS > 2 : image type not supported' + path)
                     pass # TODO .... check cube formats or hdus indexes  other than 0
 
-            return fit_data
+            return (hdus[0].header['NAXIS'], fit_data)
 
         ### image file
         elif pathlib.Path(path).suffix in img_types:
             try:
                 fit_data = plt.imread(path)
                 logger.info('Image file format = {}'.format(str(fit_data.shape)))
-                return (np.flipud(fit_data))
-            except:
-                raise ("Error loading image file : " + str(sys.exc_info()[1]))
-                return fit_data
+                #return (np.flipud(fit_data))
+                #return (0, flip_data.flipud())
+                return (0, fit_data)
+            
+            except Exception as error:
+                logger.error(f"Error reading image {path} : {error = }")
+                return (0, fit_data)
 
         ### data file 
         elif pathlib.Path(path).suffix in dat_types:
-            logger.info('DAT file type = {}'.format(path))               
-            return fit_data
+            logger.info('DAT file type = {}'.format(path))
+            return (0, fit_data)

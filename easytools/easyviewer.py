@@ -3,17 +3,17 @@
  UI Panels : 
          1. TOP : browse files / display selected file header
          2. DOWN : 
-                   a : image
-                   b : spectrum
+                   a : image (JDA imviz)
+                   b : spectra (JDB specviz)
 
  usage :
-        es = EasyViewer('<root directory>')
+        viewer = EasyViewer('<root directory>')
 
  public variables/methods : 
        <TODO>
        
 """
-from files_utils import *
+from img_utils import *
 from logger_utils import logger, handler
 from ipyfilechooser import FileChooser
 from IPython.display import display
@@ -25,12 +25,15 @@ from matplotlib import colormaps
 import matplotlib.transforms as mtransforms
 from scipy import ndimage
 import math
+import threading
 from IPython.display import display
 import ipywidgets as widgets
 from jdaviz import Imviz
 from astropy.io import fits
 from astropy import units as u
 from astropy.nddata import CCDData
+from specutils import Spectrum1D
+from jdaviz import Specviz
 
 class EasyViewer(object):   
     def __init__(self, root_path: str = '.') -> None:
@@ -38,6 +41,7 @@ class EasyViewer(object):
         create dashboard UI and declare public variables/methods
         param : root_path optional root path to start browsing files from
         """
+        
         ### read configuration
         with open(__class__.__name__ + ".yaml", 'r') as cfg_file:
             try:
@@ -47,19 +51,19 @@ class EasyViewer(object):
 
         ### public variables
         self.root_path = root_path or self.config['global']['root_path']           
-        self.selected_file = 'logo_sar.png'
-        #self.primary_data = np.random.randint(0, 256, size=(256, 256))
-        try:
-            self.primary_data = np.flipud(plt.imread(self.selected_file))
-        except AppError as error:
-            logger.error(error)
-            raise                 
+        self.selected_file = ''
+        self.primary_data = np.random.randint(0, 256, size=(256, 256))
+        #try:
+        #    self.primary_data = np.flipud(plt.imread(self.selected_file))
+        #except AppError as error:
+        #    logger.error(error)
+        #    raise                 
             
         self.saved_data = self.primary_data.copy()
         
         ### create all GUI components
         self.__create_logger_gui()
-
+        
         if not files_utils.check_access(self.root_path):
             logger.error('FATAL : root directory not accessible : {} - please update config'.format(self.root_path))
             return 
@@ -79,7 +83,6 @@ class EasyViewer(object):
         handler.show_logs()
         #handler.clear_logs()
         logger.setLevel(self.config['global']['log_level'])
-
         logger.debug('logger created')
 
     def __create_browser_gui(self) -> None:
@@ -115,7 +118,7 @@ class EasyViewer(object):
             )
     
             self.browser = widgets.VBox(children = [
-                self.dir_select,
+                #self.dir_select,
                 self.files_filter,
                 self.files_select
             ])
@@ -135,8 +138,14 @@ class EasyViewer(object):
                 description = 'Auto display new file',
                 value = False
             )
-            
-            ### wd_fit_header
+
+            ### flag multiple images displayed ?
+            self.display_multiple = widgets.Checkbox(
+                description = 'Multiple images displayed',
+                value = False
+            )
+
+            ### file info box
             self.fit_header = widgets.Textarea(
                 description = 'Infos :',
                 layout = widgets.Layout(width = '90%', height = '200px'),
@@ -147,6 +156,7 @@ class EasyViewer(object):
             self.infos = widgets.VBox(children = [
                     self.auto_refresh,
                     self.display_new,
+                    #self.display_multiple,
                     self.fit_header
             ])
 
@@ -178,15 +188,16 @@ class EasyViewer(object):
         ### left panel : image2D on top + spectra 1D down
         self.left_panel = widgets.Output(layout={'width': '100%', 'height': '600px', 'border': '1px solid grey'})
         with self.left_panel:   
-            self.imviz = Imviz()
+            self.imviz = Imviz();
             self.imviz.show()
-            display(self.imviz)
+            #display(self.imviz)
  
-
         ### right panel : all commands and correction widgets packed vertically
         self.right_panel = widgets.Output(layout = {'width': '100%', 'height': '600px', 'border': '1px solid grey'})
         with self.right_panel:
-            pass
+            self.specviz = Specviz();
+            self.specviz.show()
+            #display(self.specviz)
 
         display(widgets.VBox(children=[self.left_panel, self.right_panel]))
 
@@ -198,7 +209,7 @@ class EasyViewer(object):
             self.selected_file = self.dir_select.selected_path + os.sep + change['new']
             self.fit_header.value = str(files_utils.get_file_info(self.selected_file))
             logger.info('Selected file : {}'.format(self.selected_file))
-            self.primary_data = files_utils.get_file_data(self.selected_file)
+            self.naxis, self.primary_data = files_utils.get_file_data(self.selected_file)
             self.saved_data = self.primary_data.copy()
             self.display_file(self.selected_file)
         else:
@@ -213,19 +224,27 @@ class EasyViewer(object):
             ### a directory or no image selected yet 
             logger.warning('No image selected')
         else:
-            #self.primary_data = files_utils.get_file_data(path)
-
             if self.primary_data is not None:
-                logger.info('showing image : {}'.format(path))
-                logger.info('image size : {}'.format(self.primary_data.shape))
-                logger.info('image stats : min = {}, max = {}, std = {}, mean = {}'.format(
-                        self.primary_data.min(), 
-                        self.primary_data.max(), 
-                        self.primary_data.std(), 
-                        self.primary_data.mean()
+                if (self.naxis == 2) or (self.naxis == 0):
+                    logger.info('showing image : {}'.format(path))
+                    logger.info('image size : {}'.format(self.primary_data.shape))
+                    logger.info('image stats : min = {}, max = {}, std = {}, mean = {}'.format(
+                            self.primary_data.min(), 
+                            self.primary_data.max(), 
+                            self.primary_data.std(), 
+                            self.primary_data.mean()
+                        )
                     )
-                )
-                _data = CCDData.read(path, unit = u.adu )
-                self.imviz.load_data(_data, data_label=os.path.basename(path))
-
-
+                    self.imviz.load_data(self.primary_data, data_label=os.path.basename(path))
+                    self.imviz.default_viewer.cuts = 'minmax'
+                    self.imviz.default_viewer.set_colormap('Inferno');
+                elif self.naxis == 1:
+                    #with fits.open(self.selected_file) as file:
+                     #   specdata = file[0].data
+                      #  header = file[0].header
+                       # _spec1d = Spectrum1D(flux = self.primary_data['flux'] * u.mJy, spectral_axis = self.primary_data['wavelength'] * u.AA)
+                    self.specviz.load_data(self.selected_file, data_label = os.path.basename(path)) #, spectral_axis.unit = 'pixel', flux.unit = 'adu')
+                else:
+                    logger.warning('Unsupported image type : {}'.format(path))
+            else:
+                logger.warning('no data loaded')
