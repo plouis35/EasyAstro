@@ -24,7 +24,7 @@ from IPython.display import display
 import ipywidgets as widgets
 
 plt.style.use(astropy_mpl_style)
-quantity_support();
+quantity_support()
 
 def PlotPosition(obs_latitude: float, obs_longitude: float , obs_height: float, obs_date: str, name: str) -> widgets.HBox:
     ### get observatory location

@@ -20,6 +20,7 @@ jupyter-offlinenotebook
 nbzip
 nbgitpuller
 astropy>=6.0
+astroalign
 asdf
 asdf-astropy
 gwcs>=0.20
@@ -30,3 +31,4 @@ openpyxl
 specreduce
 ipympl
 ipyfilechooser
+tqdm
