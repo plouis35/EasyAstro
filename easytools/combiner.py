@@ -10,138 +10,112 @@ from astropy.visualization import astropy_mpl_style, quantity_support
 from astropy.utils.exceptions import AstropyWarning
 from ccdproc import combine, subtract_bias, subtract_dark, flat_correct
 from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median
+from astropy.stats import mad_std
 import astroalign as aa
 from scipy.signal import fftconvolve
-from tqdm.auto import tqdm
 from logger_utils import logger, handler
+warnings.simplefilter('ignore', category=AstropyWarning)
+warnings.simplefilter('ignore', UserWarning)
 
 class Combiner(object):
-    def __init__(self, images: List[np.ndarray]):
+    def __init__(self, images: List[CCDData], max_memory: float = 1e9):
         self._images = images
-        warnings.simplefilter('ignore', category=AstropyWarning)
-        warnings.simplefilter('ignore', UserWarning)
-        quantity_support()
-
-    def __getitem__(self, i) -> np.ndarray:
+        self._memory_limit = max_memory
+    def __getitem__(self, i:int) -> np.ndarray:
         return self._images[i]
 
     def __len__(self) -> int:
         return len(self._images)
 
-    def sum(self) -> np.ndarray:
-        return np.sum(self._images, axis=0)
+    def sum(self) -> CCDData:
+        logger.info(f'sum combine on {len(self._images)} images ...')
+        return(combine(self._images,
+                       method = 'sum',
+                       dtype = np.float32,
+                       mem_limit = self._memory_limit)
+              )
+   
+    def sigmaclip(self, low_thresh: int = 5, high_thresh: int = 5) -> CCDData:
+        logger.info(f'sigmaclip combine on {len(self._images)} images ...')
+        return(combine(self._images,
+                       method = 'average',
+                       sigma_clip = True, 
+                       sigma_clip_low_thresh = low_thresh, 
+                       sigma_clip_high_thresh = high_thresh,
+                       sigma_clip_func = np.ma.median, 
+                       signma_clip_dev_func = mad_std, 
+                       dtype = np.float32,
+                       mem_limit = self._memory_limit)
+              )
 
-    def mean(self) -> float:
-        return np.mean(self._images, axis=0)
-
-    def median(self) -> np.ndarray:
-        return np.median(self._images, axis=0)
+    def median(self) -> CCDData:
+        logger.info(f'median combine on {len(self._images)} images ...')
+        return (combine(self._images, 
+                        method = 'median', 
+                        dtype = np.float32, 
+                        mem_limit = self._memory_limit)
+               )
 
     def trim(self, trim_region: str):
         if trim_region is not None:
-            logger.info(f'trimming to ({trim_region}) {len(self._images)} images ...')
-            if isinstance(trim_region, Combiner):
-                raise NotImplemented("Combiner")
             for i in range(0, len(self._images)):
-                self._images[i] = self._images[i][eval(trim_region)[1]:eval(trim_region)[3], eval(trim_region)[0]:eval(trim_region)[2]]  
+                self._images[i] = trim_image(self._images[i][eval(trim_region)[1]:eval(trim_region)[3], eval(trim_region)[0]:eval(trim_region)[2]])
+
+            logger.info(f'{len(self._images)} images trimmed to ({trim_region})')
         else:
             logger.info('no trimming')
         return self
     
-    def addition(self, operand):
-        logger.info(f'{operand.dtype} adding to {len(self._images)} images ...')
-        if isinstance(operand, Combiner):
-            raise NotImplemented("Combiner")
-        elif isinstance(operand, np.ndarray):
-            if operand.dtype != self._images[0].dtype:
-                raise Exception("Incompatible dtype")
-            if operand.shape != self._images[0].shape:
-                raise Exception("Incompatible shapes")
-            for i in range(0, len(self._images)):
-                self._images[i] = self._images[i] + operand
+    def substract_bias(self, operand):
+        for i in range(0, len(self._images)):
+            self._images[i] = subtract_bias(self._images[i], operand)
+            
+        logger.info(f'{operand.dtype} bias substracted to {len(self._images)} images')
         return self
 
-    def substract(self, operand):
-        logger.info(f'{operand.dtype} substracting to {len(self._images)} images ...')
-        if isinstance(operand, Combiner):
-            raise NotImplemented("Combiner")
-        elif isinstance(operand, np.ndarray):
-            if operand.dtype != self._images[0].dtype:
-                raise Exception("Incompatible dtype")
-            if operand.shape != self._images[0].shape:
-                raise Exception("Incompatible shapes")
-            for i in range(0, len(self._images)):
-                self._images[i] = self._images[i] - operand
+    def substract_dark(self, operand, scale_exposure: bool = True, exposure = 'EXPTIME'):
+        for i in range(0, len(self._images)):
+            self._images[i] = subtract_dark(self._images[i], operand, scale = scale_exposure, exposure_time = exposure, exposure_unit = u.second)                
+        
+        logger.info(f'{operand.dtype} dark substracted to {len(self._images)} images')
+        return self
+    
+    def divide_flat(self, operand):
+        for i in range(0, len(self._images)):
+            self._images[i] = flat_correct(self._images[i], operand)
+        
+        logger.info(f'{operand.dtype} flat divided to {len(self._images)} images')
         return self
 
-    def multiply(self, operand):
-        logger.info(f'{operand.dtype} multiplying to {len(self._images)} images ...')
-        if isinstance(operand, Combiner):
-            raise NotImplemented("Combiner")
-        elif isinstance(operand, np.ndarray):
-            if operand.dtype != self._images[0].dtype:
-                raise Exception("Incompatible dtype")
-            if operand.shape != self._images[0].shape:
-                raise Exception("Incompatible shapes")
-            for i in range(0, len(self._images)):
-                self._images[i] = np.multiply(self._images[i], operand)
-
-        elif np.issctype(type(operand)):
-            for i in range(0, len(self._images)):
-                self._images[i] = self._images[i] * operand
-        else:
-            raise Exception("Incompatible type")
-        return self
-
-    def divide(self, operand):
-        logger.info(f'{operand.dtype} dividing {len(self._images)} images ...')
-        if isinstance(operand, Combiner):
-            raise NotImplemented("Combiner")
-        elif isinstance(operand, np.ndarray):
-            if operand.dtype != self._images[0].dtype:
-                raise Exception("Incompatible dtype")
-            if operand.shape != self._images[0].shape:
-                raise Exception("Incompatible shapes")
-            for i in range(0, len(self._images)):
-                self._images[i] = np.divide(self._images[i], operand)
-
-        elif np.issctype(type(operand)):
-            for i in range(0, len(self._images)):
-                self._images[i] = self._images[i] / operand
-
-        else:
-            raise Exception("Incompatible type")
-        return self
-
-    def align(self, ref_image_index: int = 0) -> Combiner:
+    def align(self, ref_image_index: int = 0):
         aligned_images = []
         #for i, img in tqdm(iterable = zip(range(len(self._images)), self._images), total=len(self._images), desc = 'aligning : '):
         for i, img in zip(range(len(self._images)), self._images):
-            logger.info(f'Image {i} aligning to image ref {ref_image_index}')
+            logger.info(f'image {i}: aligning to image ref {ref_image_index} ...')
             try: 
                 reg_img, _ = aa.register(img, self._images[ref_image_index])
-                aligned_images.append(reg_img)
+                aligned_images.append(CCDData(reg_img, unit = u.adu))
 
             except Exception as err:
                 logger.error(f"Error {err} : aligning image {i}")
                 
-        logger.info('align complete')
+        logger.info('align: complete')
         return Combiner(aligned_images)
 
-    def align_fft(self, ref_image_index: int = 0) -> Combiner:    
+    def align_fft(self, ref_image_index: int = 0):    
         ### Collect arrays and crosscorrelate all (except the first) with the first.
-        logger.info('align : fftconvolve running...')
+        logger.info('align: fftconvolve running...')
         nX, nY = self._images[ref_image_index].shape
         correlations = [fftconvolve(self._images[ref_image_index], image[::-1, ::-1], mode='same') 
                         for image in self._images[1:]]
     
         ### For each image determine the coordinate of maximum cross-correlation.
-        logger.info('align : get max cross-correlation for every image...')
+        logger.info('align: get max cross-correlation for every image...')
         shift_indices = [np.unravel_index(np.argmax(corr_array, axis=None), corr_array.shape) 
                          for corr_array in correlations]
         
         deltas = [(ind[0] - int(nX / 2), ind[1] - int(nY / 2)) for ind in shift_indices]
-        logger.info('images deltas = ' + repr(deltas))
+        logger.info('align: images deltas = ' + repr(deltas))
     
         ### Warn for ghost images if realignment requires shifting by more than
         ### 15% of the field size.
@@ -149,29 +123,28 @@ class Combiner(object):
         y_frac = abs(max(deltas, key=lambda x: abs(x[1]))[1]) / nY
         t_frac = max(x_frac, y_frac)
         if t_frac > 0.15:
-            logger.warning('shifting by {}% of the field size'.format(int(100 * t_frac)))
+            logger.warning('align: shifting by {}% of the field size'.format(int(100 * t_frac)))
     
         ### Roll the images to realign them and return their median.
-        logger.info('images realignement ...')
-        realigned_images = [np.roll(image, deltas[i], axis=(0, 1))
+        logger.info('align: images realignement ...')
+        realigned_images = [CCDData(np.roll(image, deltas[i], axis=(0, 1)).data.astype('float32'), unit = u.adu) 
                             for (i, image) in enumerate(self._images[1:])]
 
         ### do noy forget reference image
-        realigned_images.append(self._images[ref_image_index])
-        logger.info('align complete')
+        realigned_images.append(CCDData(self._images[ref_image_index].data.astype('float32'), unit = u.adu))
+        logger.info('align: complete')
         return Combiner(realigned_images)
 
-
 class Images(Combiner):
-    def __init__(self, images: List[np.ndarray]):
+    def __init__(self, images: List[CCDData]):
         Combiner.__init__(self, images)
 
     @classmethod
     def from_fit(cls, file_paths: List[str]):
         images = []
         for fp in file_paths:
-            fitdata = CCDData.read(fp, unit = u.adu)
-            images.append(fitdata.data.astype(np.float32))
+            #fitdata = CCDData.read(fp, unit = u.adu)    #.data.astype(np.float32))
+            images.append(CCDData.read(fp, unit = u.adu)) 
             
         logger.info(f'{file_paths} loaded')
         return cls(images)
