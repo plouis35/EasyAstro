@@ -18,7 +18,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', UserWarning)
 
 class Combiner(object):
-    def __init__(self, images: List[CCDData], max_memory: float = 1e9):
+    def __init__(self, images: List[CCDData], max_memory: float = 2e9):
         self._images = images
         self._memory_limit = max_memory
     def __getitem__(self, i:int) -> np.ndarray:
@@ -66,35 +66,35 @@ class Combiner(object):
             logger.info('no trimming')
         return self
     
-    def substract_bias(self, operand):
+    def bias_substract(self, operand):
         for i in range(0, len(self._images)):
             self._images[i] = subtract_bias(self._images[i], operand)
             
         logger.info(f'{operand.dtype} bias substracted to {len(self._images)} images')
         return self
 
-    def substract_dark(self, operand, scale_exposure: bool = True, exposure = 'EXPTIME'):
+    def dark_substract(self, operand, scale_exposure: bool = True, exposure = 'EXPTIME'):
         for i in range(0, len(self._images)):
             self._images[i] = subtract_dark(self._images[i], operand, scale = scale_exposure, exposure_time = exposure, exposure_unit = u.second)                
         
         logger.info(f'{operand.dtype} dark substracted to {len(self._images)} images')
         return self
     
-    def divide_flat(self, operand):
+    def flat_divide(self, operand):
         for i in range(0, len(self._images)):
             self._images[i] = flat_correct(self._images[i], operand)
         
         logger.info(f'{operand.dtype} flat divided to {len(self._images)} images')
         return self
 
-    def align(self, ref_image_index: int = 0):
+    def star_align(self, ref_image_index: int = 0):
         aligned_images = []
         #for i, img in tqdm(iterable = zip(range(len(self._images)), self._images), total=len(self._images), desc = 'aligning : '):
         for i, img in zip(range(len(self._images)), self._images):
             logger.info(f'image {i}: aligning to image ref {ref_image_index} ...')
             try: 
                 reg_img, _ = aa.register(img, self._images[ref_image_index])
-                aligned_images.append(CCDData(reg_img, unit = u.adu))
+                aligned_images.append(CCDData(reg_img, unit = u.adu, header = img.header))
 
             except Exception as err:
                 logger.error(f"Error {err} : aligning image {i}")
@@ -102,11 +102,13 @@ class Combiner(object):
         logger.info('align: complete')
         return Combiner(aligned_images)
 
-    def align_fft(self, ref_image_index: int = 0):    
+    def spec_align(self, ref_image_index: int = 0):    
         ### Collect arrays and crosscorrelate all (except the first) with the first.
         logger.info('align: fftconvolve running...')
         nX, nY = self._images[ref_image_index].shape
-        correlations = [fftconvolve(self._images[ref_image_index], image[::-1, ::-1], mode='same') 
+        correlations = [fftconvolve(self._images[ref_image_index].data.astype('float32'),
+                                    image[::-1, ::-1].data.astype('float32'),
+                                    mode='same') 
                         for image in self._images[1:]]
     
         ### For each image determine the coordinate of maximum cross-correlation.
@@ -127,11 +129,11 @@ class Combiner(object):
     
         ### Roll the images to realign them and return their median.
         logger.info('align: images realignement ...')
-        realigned_images = [CCDData(np.roll(image, deltas[i], axis=(0, 1)).data.astype('float32'), unit = u.adu) 
+        realigned_images = [CCDData(np.roll(image, deltas[i], axis=(0, 1)).data.astype('float32'), unit = u.adu, header = image.header) 
                             for (i, image) in enumerate(self._images[1:])]
 
-        ### do noy forget reference image
-        realigned_images.append(CCDData(self._images[ref_image_index].data.astype('float32'), unit = u.adu))
+        ### do not forget the reference image
+        realigned_images.append(CCDData(self._images[ref_image_index].data.astype('float32'), unit = u.adu, header = self._images[ref_image_index].header))
         logger.info('align: complete')
         return Combiner(realigned_images)
 
