@@ -1,4 +1,4 @@
-""" Combiner class operates (using CCDProc and astroalign) on a set of FIT images
+""" EasyCombiner class operates (using CCDProc and astroalign) on a set of FIT images
 """
 from typing import List, Tuple
 import warnings, fnmatch, os
@@ -9,7 +9,7 @@ from astropy.nddata import CCDData, StdDevUncertainty
 from astropy.visualization import astropy_mpl_style, quantity_support
 from astropy.utils.exceptions import AstropyWarning
 from ccdproc import combine, subtract_bias, subtract_dark, flat_correct
-from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median
+from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median, create_deviation
 from astropy.stats import mad_std
 import astroalign as aa
 from scipy.signal import fftconvolve
@@ -17,7 +17,7 @@ from logger_utils import logger, handler
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', UserWarning)
 
-class Combiner(object):
+class EasyCombiner(object):
     def __init__(self, images: List[CCDData], max_memory: float = 2e9):
         self._images = images
         self._memory_limit = max_memory
@@ -65,6 +65,13 @@ class Combiner(object):
         else:
             logger.info('no trimming')
         return self
+
+    def offset(self, operand):
+        for i in range(0, len(self._images)):
+            self._images[i] = CCDData(CCDData.add(self._images[i], operand), header = self._images[i].header) #, unit = self._images[i].unit
+            
+        logger.info(f'{len(self._images)} images added by ({operand})')
+        return self
     
     def bias_substract(self, operand):
         for i in range(0, len(self._images)):
@@ -100,7 +107,7 @@ class Combiner(object):
                 logger.error(f"Error {err} : aligning image {i}")
                 
         logger.info('align: complete')
-        return Combiner(aligned_images)
+        return EasyCombiner(aligned_images)
 
     def spec_align(self, ref_image_index: int = 0):    
         ### Collect arrays and crosscorrelate all (except the first) with the first.
@@ -135,20 +142,26 @@ class Combiner(object):
         ### do not forget the reference image
         realigned_images.append(CCDData(self._images[ref_image_index].data.astype('float32'), unit = u.adu, header = self._images[ref_image_index].header))
         logger.info('align: complete')
-        return Combiner(realigned_images)
+        return EasyCombiner(realigned_images)
 
-class Images(Combiner):
+class Images(EasyCombiner):
     def __init__(self, images: List[CCDData]):
-        Combiner.__init__(self, images)
+        EasyCombiner.__init__(self, images)
 
     @classmethod
     def from_fit(cls, file_paths: List[str]):
         images = []
         for fp in file_paths:
-            #fitdata = CCDData.read(fp, unit = u.adu)    #.data.astype(np.float32))
-            images.append(CCDData.read(fp, unit = u.adu)) 
+            fitdata = CCDData.read(fp, unit = u.adu)
+            camera_electronic_gain = 0.13 * u.electron/u.adu   # atik 420m 
+            camera_readout_noise = 3.0 * u.electron     # atik 420m
+            images.append(create_deviation(fitdata,
+                                           gain = camera_electronic_gain,
+                                           readnoise = camera_readout_noise,
+                                           disregard_nan = False
+                                          ))
             
-        logger.info(f'{file_paths} loaded')
+        logger.info(f'set of images : {file_paths} loaded')
         return cls(images)
 
     @classmethod
