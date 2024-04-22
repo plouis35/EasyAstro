@@ -40,8 +40,7 @@ class EasyViewer(object):
         """ 
         create dashboard UI and declare public variables/methods
         param : root_path optional root path to start browsing files from
-        """
-        
+        """       
         ### read configuration
         with open(__class__.__name__ + ".yaml", 'r') as cfg_file:
             try:
@@ -188,16 +187,14 @@ class EasyViewer(object):
         ### left panel : image2D on top + spectra 1D down
         self.left_panel = widgets.Output(layout={'width': '100%', 'height': '600px', 'border': '1px solid grey'})
         with self.left_panel:   
-            self.imviz = Imviz();
-            self.imviz.show()
-            #display(self.imviz)
- 
+            self.imviz = Imviz()
+            self.imviz.show() #height=600)
+
         ### right panel : all commands and correction widgets packed vertically
         self.right_panel = widgets.Output(layout = {'width': '100%', 'height': '600px', 'border': '1px solid grey'})
         with self.right_panel:
-            self.specviz = Specviz();
+            self.specviz = Specviz()
             self.specviz.show()
-            #display(self.specviz)
 
         display(widgets.VBox(children=[self.left_panel, self.right_panel]))
 
@@ -225,7 +222,8 @@ class EasyViewer(object):
             logger.warning('No image selected')
         else:
             if self.primary_data is not None:
-                if (self.naxis == 2) or (self.naxis == 0):
+                if (self.naxis == 2) #or (self.naxis == 0):
+                    ### this is an image - use imviz 
                     logger.info('showing image : {}'.format(path))
                     logger.info('image size : {}'.format(self.primary_data.shape))
                     logger.info('image stats : min = {}, max = {}, std = {}, mean = {}'.format(
@@ -239,12 +237,13 @@ class EasyViewer(object):
                     self.imviz.default_viewer.cuts = 'minmax'
                     self.imviz.default_viewer.set_colormap('Inferno');
                 elif self.naxis == 1:
-                    #with fits.open(self.selected_file) as file:
-                     #   specdata = file[0].data
-                      #  header = file[0].header
-                       # _spec1d = Spectrum1D(flux = self.primary_data['flux'] * u.mJy, spectral_axis = self.primary_data['wavelength'] * u.AA)
-                    self.specviz.load_data(self.selected_file, data_label = os.path.basename(path)) #, spectral_axis.unit = 'pixel', flux.unit = 'adu')
+                    ### this is a spectrum - use specviz
+                    fitdata = Spectrum1D.read(path)  
+                    _spec1d = Spectrum1D(spectral_axis = fitdata.wavelength, flux = fitdata.flux * u.adu)
+                    self.specviz.load_data(_spec1d, data_label = os.path.basename(path))
+            
                 else:
+                    ### more naxis options TO DO...
                     logger.warning('Unsupported image type : {}'.format(path))
             else:
                 logger.warning('no data loaded')

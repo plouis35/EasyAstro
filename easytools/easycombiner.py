@@ -3,6 +3,7 @@
 from typing import List, Tuple
 import warnings, fnmatch, os
 import numpy as np
+from logger_utils import logger, handler
 from astropy.io import fits
 from astropy import units as u
 from astropy.nddata import CCDData, StdDevUncertainty
@@ -13,7 +14,6 @@ from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median, create_
 from astropy.stats import mad_std
 import astroalign as aa
 from scipy.signal import fftconvolve
-from logger_utils import logger, handler
 warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', UserWarning)
 

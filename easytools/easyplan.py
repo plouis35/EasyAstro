@@ -26,6 +26,19 @@ import ipywidgets as widgets
 plt.style.use(astropy_mpl_style)
 quantity_support()
 
+### from https://astroplan.readthedocs.io/en/latest/_modules/astroplan/moon.html
+def moon_phase_angle(time, ephemeris=None):
+    sun = get_sun(time)
+    moon = get_body("moon", time, ephemeris=ephemeris)
+    elongation = sun.separation(moon)
+    return np.arctan2(sun.distance*np.sin(elongation),
+                      moon.distance - sun.distance*np.cos(elongation))
+
+def moon_illumination(time, ephemeris=None):
+    i = moon_phase_angle(time, ephemeris=ephemeris)
+    k = (1 + np.cos(i))/2.0
+    return k.value
+
 def PlotPosition(obs_latitude: float, obs_longitude: float , obs_height: float, obs_date: str, name: str) -> widgets.HBox:
     ### get observatory location
     obs_date = obs_date
