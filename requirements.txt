@@ -17,7 +17,7 @@ xlrd
 requests
 jupyterlab
 jupyter-offlinenotebook
-nbzip
+#nbzip
 nbgitpuller
 astropy>=6.0
 astroalign
@@ -32,3 +32,5 @@ specreduce
 ipympl
 ipyfilechooser
 tqdm
+astroplan
+jdaviz
