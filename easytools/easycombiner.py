@@ -1,4 +1,4 @@
-""" EasyCombiner class operates (using CCDProc and astroalign) on a set of FIT images
+""" EasyCombiner class operates (using CCDProc and astroalign routines) on a set of FIT images
 """
 from typing import List, Tuple
 import warnings, fnmatch, os
@@ -10,7 +10,8 @@ from astropy.nddata import CCDData, StdDevUncertainty
 from astropy.visualization import astropy_mpl_style, quantity_support
 from astropy.utils.exceptions import AstropyWarning
 from ccdproc import combine, subtract_bias, subtract_dark, flat_correct
-from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median, create_deviation
+from ccdproc import trim_image, Combiner, ccd_process, cosmicray_median, cosmicray_lacosmic, create_deviation
+from ccdproc import ImageFileCollection, gain_correct
 from astropy.stats import mad_std
 import astroalign as aa
 from scipy.signal import fftconvolve
@@ -18,7 +19,7 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 warnings.simplefilter('ignore', UserWarning)
 
 class EasyCombiner(object):
-    def __init__(self, images: List[CCDData], max_memory: float = 2e9):
+    def __init__(self, images: List[CCDData], max_memory: float = 1e9):
         self._images = images
         self._memory_limit = max_memory
     def __getitem__(self, i:int) -> np.ndarray:
@@ -89,8 +90,8 @@ class EasyCombiner(object):
     
     def flat_divide(self, operand):
         for i in range(0, len(self._images)):
-            self._images[i] = flat_correct(self._images[i], operand)
-        
+            self._images[i] = flat_correct(ccd = self._images[i], flat = operand, min_value = None, norm_value = 10000 * u.adu)
+
         logger.info(f'{operand.dtype} flat divided to {len(self._images)} images')
         return self
 
@@ -149,19 +150,25 @@ class Images(EasyCombiner):
         EasyCombiner.__init__(self, images)
 
     @classmethod
-    def from_fit(cls, file_paths: List[str]):
+    ### collect and sort (according to fit header 'date-obs') file names using a wildcard filter
+    def find_files(cls, directory: str, files_filter: str, sort_key: str = 'date-obs') -> List[str] :
+        ic = ImageFileCollection(directory, glob_include=files_filter)
+        ic.sort([sort_key])
+        return (ic.files_filtered(include_path=True))
+
+    @classmethod
+    def from_fit(cls, dir: str, filter: str, 
+                 camera_electronic_gain: float = 1.2 * u.electron/u.adu, 
+                 camera_readout_noise: float =  2.2 * u.electron):
+        
         images = []
-        for fp in file_paths:
-            fitdata = CCDData.read(fp, unit = u.adu)
-            camera_electronic_gain = 0.13 * u.electron/u.adu   # atik 420m 
-            camera_readout_noise = 3.0 * u.electron     # atik 420m
-            images.append(create_deviation(fitdata,
+        for fp in Images.find_files(directory = dir, files_filter = filter):
+            images.append(create_deviation(CCDData.read(fp, unit = u.adu),
                                            gain = camera_electronic_gain,
                                            readnoise = camera_readout_noise,
-                                           disregard_nan = False
+                                           disregard_nan = True
                                           ))
-            
-        logger.info(f'set of images : {file_paths} loaded')
+            logger.info(f'image : {fp} loaded')
         return cls(images)
 
     @classmethod
