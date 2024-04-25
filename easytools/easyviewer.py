@@ -1,19 +1,19 @@
 """
  EASYVIEWER - FIT files UI browser based on jupyter IPYWIDGETS
  UI Panels : 
-         1. TOP : browse files / display selected file header
+         1. TOP : browse files / display selected file infos
          2. DOWN : 
                    a : image (JDA imviz)
-                   b : spectra (JDB specviz)
+                   b : spectra (JDA specviz)
 
  usage :
-        viewer = EasyViewer('<root directory>')
+        viewer = EasyViewer(root_path, cuts, colormap)
 
  public variables/methods : 
        <TODO>
        
 """
-from img_utils import *
+from files_utils import *
 from logger_utils import logger, handler
 from ipyfilechooser import FileChooser
 from IPython.display import display
@@ -36,7 +36,7 @@ from specutils import Spectrum1D
 from jdaviz import Specviz
 
 class EasyViewer(object):   
-    def __init__(self, root_path: str = '.') -> None:
+    def __init__(self, root_path: str = '.', cuts: str = 'minmax', colormap : str = 'Inferno') -> None:
         """ 
         create dashboard UI and declare public variables/methods
         param : root_path optional root path to start browsing files from
@@ -49,7 +49,9 @@ class EasyViewer(object):
                 raise (except_error)
 
         ### public variables
-        self.root_path = root_path or self.config['global']['root_path']           
+        self.root_path = root_path # or self.config['global']['root_path'] 
+        self.cuts = cuts
+        self.colormap = colormap
         self.selected_file = ''
         self.primary_data = np.random.randint(0, 256, size=(256, 256))
         #try:
@@ -222,11 +224,11 @@ class EasyViewer(object):
             logger.warning('No image selected')
         else:
             if self.primary_data is not None:
-                if (self.naxis == 2) #or (self.naxis == 0):
+                if self.naxis == 2:
                     ### this is an image - use imviz 
-                    logger.info('showing image : {}'.format(path))
-                    logger.info('image size : {}'.format(self.primary_data.shape))
-                    logger.info('image stats : min = {}, max = {}, std = {}, mean = {}'.format(
+                    logger.info('showing image: {}'.format(path))
+                    logger.info('image size: {}'.format(self.primary_data.shape))
+                    logger.info('image stats: min = {}, max = {}, std = {}, mean = {}'.format(
                             self.primary_data.min(), 
                             self.primary_data.max(), 
                             self.primary_data.std(), 
@@ -234,16 +236,24 @@ class EasyViewer(object):
                         )
                     )
                     self.imviz.load_data(self.primary_data, data_label=os.path.basename(path))
-                    self.imviz.default_viewer.cuts = 'minmax'
-                    self.imviz.default_viewer.set_colormap('Inferno');
+                    self.imviz.default_viewer.cuts = self.cuts
+                    self.imviz.default_viewer.set_colormap(self.colormap);
                 elif self.naxis == 1:
                     ### this is a spectrum - use specviz
+                    logger.info('showing spectrum: {}'.format(path))
+                    logger.info('spectrum stats: min = {}, max = {}, std = {}, mean = {}'.format(
+                            self.primary_data.min(), 
+                            self.primary_data.max(), 
+                            self.primary_data.std(), 
+                            self.primary_data.mean()
+                        )
+                    )
                     fitdata = Spectrum1D.read(path)  
                     _spec1d = Spectrum1D(spectral_axis = fitdata.wavelength, flux = fitdata.flux * u.adu)
                     self.specviz.load_data(_spec1d, data_label = os.path.basename(path))
             
                 else:
                     ### more naxis options TO DO...
-                    logger.warning('Unsupported image type : {}'.format(path))
+                    logger.warning('file type not displayable: {}'.format(path))
             else:
                 logger.warning('no data loaded')

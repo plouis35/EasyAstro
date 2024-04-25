@@ -8,7 +8,8 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 
 fit_types = ['.fit', '.fits', '.fts']
-dat_types = ['.csv', '.tsv', '.dat', '.lst', '.txt', '.log']
+dat_types = ['.csv', '.tsv', '.dat']
+txt_types = ['.lst', '.txt', '.log', '.yaml', '.yml', '.json', '.bas']
 img_types = ['.jpg', '.png', '.gif']
 
 class files_utils:
@@ -64,7 +65,19 @@ class files_utils:
                 return lines + '\n...\n'
             except:
                 return ("Not a DAT file - " + str(sys.exc_info()[1]))
-                
+
+        elif pathlib.Path(path).suffix in txt_types:
+            try:
+                lines = ''
+                with open(path, 'r') as f:
+                    for i, line in enumerate(f):
+                        lines += line
+                        if i == 20:
+                            break
+                return lines + '\n...\n'
+            except:
+                return ("Not a TEXT file - " + str(sys.exc_info()[1]))
+
         elif pathlib.Path(path).suffix in img_types:
             try:
                 img = plt.imread(path)
@@ -78,39 +91,50 @@ class files_utils:
         else:
             return ("File type not supported : " + pathlib.Path(path).suffix)
             
-    def get_file_data(path: str = None) -> np:
+    def get_file_data(path: str = None) -> (int, np):
         """ 
         opens the path file - returns a numpy array containing image data - manages all supported image types
         """    
-        fit_data = np.zeros(shape=(10, 10))    # dummy 
+        fit_data = np.zeros(shape=(10, 10))    # dummy image
+        naxis = 0
+        
         ### FIT file 
         if pathlib.Path(path).suffix in fit_types:
             with fits.open(path, ignore_missing_simple=True) as hdus:
                 if hdus[0].header['NAXIS'] == 1:
-                    logger.info('NAXIS = 1 --> returning spectra data')
+                    #logger.info('NAXIS = 1 --> returning spectra data')
                     fit_data = hdus[0].data.copy()
-                    pass # TODO ....
                     
                 elif hdus[0].header['NAXIS'] == 2:
-                    logger.info('NAXIS = 2 --> returning image data')
+                    #logger.info('NAXIS = 2 --> returning image data')
                     fit_data = hdus[0].data.copy()
                 else:
-                    logger.warning('NAXIS > 2 : image type not supported' + path)
-                    pass # TODO .... check cube formats or hdus indexes  other than 0
+                    #logger.warning('NAXIS > 2 : image type not supported' + path)
+                    pass
 
-            return fit_data
+                naxis = hdus[0].header['NAXIS']
 
         ### image file
         elif pathlib.Path(path).suffix in img_types:
             try:
                 fit_data = plt.imread(path)
-                logger.info('Image file format = {}'.format(str(fit_data.shape)))
-                return (np.flipud(fit_data))
+                #logger.info('Image file format = {}'.format(str(fit_data.shape)))
             except:
                 raise ("Error loading image file : " + str(sys.exc_info()[1]))
-                return fit_data
 
         ### data file 
         elif pathlib.Path(path).suffix in dat_types:
-            logger.info('DAT file type = {}'.format(path))               
-            return fit_data
+            #logger.info('DAT file type = {}'.format(path))  
+            pass
+        
+        ### text file 
+        elif pathlib.Path(path).suffix in txt_types:
+            #logger.info('TEXT file type = {}'.format(path))      
+            pass
+
+        ### not supported yet
+        else:
+            #logger.info('Unsupported file type = {}'.format(path))
+            pass
+            
+        return (naxis, fit_data)
