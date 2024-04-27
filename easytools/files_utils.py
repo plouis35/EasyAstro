@@ -5,6 +5,8 @@ import os, time, sys, configparser, threading, pathlib, re, fnmatch
 from logger_utils import logger
 import numpy as np
 from astropy.io import fits
+from astropy import units as u
+from astropy.nddata import CCDData, StdDevUncertainty
 import matplotlib.pyplot as plt
 
 fit_types = ['.fit', '.fits', '.fts']
@@ -45,8 +47,9 @@ class files_utils:
         """    
         if pathlib.Path(path).suffix in fit_types:       
             try:
-                with fits.open(path, ignore_missing_simple=True) as hdus:
-                    return (repr(hdus[0].header))
+                return (repr(CCDData.read(path, unit = u.adu).header))
+                #with fits.open(path, ignore_missing_simple=True) as hdus:
+                 #   return (repr(hdus[0].header))
             except KeyError:
                 return ('missing KEYS in FIT file')        
             except IOError as e:
@@ -60,9 +63,9 @@ class files_utils:
                 with open(path, 'r') as f:
                     for i, line in enumerate(f):
                         lines += line
-                        if i == 20:
-                            break
-                return lines + '\n...\n'
+                      #  if i == 20:
+                       #     break
+                return (lines) # + '\n...\n'
             except:
                 return ("Not a DAT file - " + str(sys.exc_info()[1]))
 
@@ -72,9 +75,9 @@ class files_utils:
                 with open(path, 'r') as f:
                     for i, line in enumerate(f):
                         lines += line
-                        if i == 20:
-                            break
-                return lines + '\n...\n'
+                      #  if i == 20:
+                       #     break
+                return (lines) # + '\n...\n'
             except:
                 return ("Not a TEXT file - " + str(sys.exc_info()[1]))
 
@@ -100,19 +103,11 @@ class files_utils:
         
         ### FIT file 
         if pathlib.Path(path).suffix in fit_types:
-            with fits.open(path, ignore_missing_simple=True) as hdus:
-                if hdus[0].header['NAXIS'] == 1:
-                    #logger.info('NAXIS = 1 --> returning spectra data')
-                    fit_data = hdus[0].data.copy()
-                    
-                elif hdus[0].header['NAXIS'] == 2:
-                    #logger.info('NAXIS = 2 --> returning image data')
-                    fit_data = hdus[0].data.copy()
-                else:
-                    #logger.warning('NAXIS > 2 : image type not supported' + path)
-                    pass
-
-                naxis = hdus[0].header['NAXIS']
+            try:
+                fit_data = CCDData.read(path, unit = u.adu).data.copy()
+                naxis = CCDData.read(path, unit = u.adu).header['NAXIS'] 
+            except:
+                raise ("Error loading fits file : " + str(sys.exc_info()[1]))
 
         ### image file
         elif pathlib.Path(path).suffix in img_types:
