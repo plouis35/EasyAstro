@@ -95,6 +95,25 @@ class EasyCombiner(object):
         logger.info(f'{operand.dtype} flat divided to {len(self._images)} images')
         return self
 
+    def process_ccd(self, master_bias, master_dark, master_flat, exposure_key = 'EXPTIME'):
+        for i in range(0, len(self._images)):
+            self._images[i] = ccd_process(ccd = self._images[i], 
+                oscan = None, 
+                gain_corrected = False, 
+                trim = None, 
+                error = False,
+#                gain = camera_electronic_gain*u.electron/u.adu ,
+#                readnoise = camera_readout_noise*u.electron,
+                master_bias = master_bias,
+                dark_frame = master_dark,
+                master_flat = master_flat,
+                exposure_key = exposure_key,
+                exposure_unit = u.second,
+                dark_scale = True)            
+
+        logger.info(f'{len(self._images)} images reduced')
+        return self
+
     def star_align(self, ref_image_index: int = 0):
         aligned_images = []
         #for i, img in tqdm(iterable = zip(range(len(self._images)), self._images), total=len(self._images), desc = 'aligning : '):

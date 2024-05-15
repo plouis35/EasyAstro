@@ -53,13 +53,7 @@ class EasyViewer(object):
         self.cuts = cuts
         self.colormap = colormap
         self.selected_file = ''
-        self.primary_data = np.random.randint(0, 256, size=(256, 256))
-        #try:
-        #    self.primary_data = np.flipud(plt.imread(self.selected_file))
-        #except AppError as error:
-        #    logger.error(error)
-        #    raise                 
-            
+        self.primary_data = np.random.randint(0, 256, size=(256, 256))           
         self.saved_data = self.primary_data.copy()
         
         ### create all GUI components
@@ -72,7 +66,7 @@ class EasyViewer(object):
         self.__create_browser_gui()
         self.__create_viewer_gui()
 
-        ### monitors new files in background
+        ### monitors new files in background (TODO : check whether thread is already running)
         self.watch_thread = threading.Thread(target = self.__watch_files, name='EASYSPEC_watch_thread')
         self.watch_thread.start()
         logger.debug('watch thread started - tid = {}'.format(self.watch_thread))          
@@ -140,24 +134,17 @@ class EasyViewer(object):
                 value = False
             )
 
-            ### flag multiple images displayed ?
-            self.display_multiple = widgets.Checkbox(
-                description = 'Multiple images displayed',
-                value = False
-            )
-
             ### file info box
             self.fit_header = widgets.Textarea(
                 description = 'Infos :',
-                layout = widgets.Layout(width = '90%', height = '200px'),
+                layout = widgets.Layout(width = '90%', height = '230px'),
                 disabled=True
             )
         
             ### construct & arrange widgets
             self.infos = widgets.VBox(children = [
                     self.auto_refresh,
-                    self.display_new,
-                    #self.display_multiple,
+                    #self.display_new,
                     self.fit_header
             ])
 
@@ -178,8 +165,7 @@ class EasyViewer(object):
                 #logger.debug('refreshing list of files...')
                 self.files_select.options = files_utils.list_files(self.dir_select.selected_path, self.files_filter.value)
                 time.sleep(1)
-        
-            
+                
     def __create_viewer_gui(self) -> None:
         """ 
         creates viewer panels
@@ -202,7 +188,7 @@ class EasyViewer(object):
 
     def display_infos(self, change: str) -> None:
         """ 
-        display selected file : show info + show image/spectra
+        display selected file : meta info + image or spectra
         """        
         if (self.dir_select.selected_path is not None) and (change['new'] is not None):
             self.selected_file = self.dir_select.selected_path + os.sep + change['new']

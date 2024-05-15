@@ -107,7 +107,7 @@ class files_utils:
                 fit_data = CCDData.read(path, unit = u.adu).data.copy()
                 naxis = CCDData.read(path, unit = u.adu).header['NAXIS'] 
             except:
-                raise ("Error loading fits file : " + str(sys.exc_info()[1]))
+                raise 
 
         ### image file
         elif pathlib.Path(path).suffix in img_types:
@@ -115,7 +115,7 @@ class files_utils:
                 fit_data = plt.imread(path)
                 #logger.info('Image file format = {}'.format(str(fit_data.shape)))
             except:
-                raise ("Error loading image file : " + str(sys.exc_info()[1]))
+                raise
 
         ### data file 
         elif pathlib.Path(path).suffix in dat_types:
