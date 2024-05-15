@@ -164,6 +164,7 @@ class EasyViewer(object):
             while True:
                 #logger.debug('refreshing list of files...')
                 self.files_select.options = files_utils.list_files(self.dir_select.selected_path, self.files_filter.value)
+                self.files_select.value = None
                 time.sleep(1)
                 
     def __create_viewer_gui(self) -> None:
@@ -198,7 +199,7 @@ class EasyViewer(object):
             self.saved_data = self.primary_data.copy()
             self.display_file(self.selected_file)
         else:
-            logger.info('No file selected')
+            logger.debug('No file selected');
 
 
     def display_file(self, path: str) -> None: 
@@ -236,10 +237,10 @@ class EasyViewer(object):
                     )
                     fitdata = Spectrum1D.read(path)  
                     _spec1d = Spectrum1D(spectral_axis = fitdata.wavelength, flux = fitdata.flux * u.adu)
-                    self.specviz.load_data(_spec1d, data_label = os.path.basename(path))
+                    self.specviz.load_data(_spec1d, data_label = os.path.basename(path));
             
                 else:
                     ### more naxis options TO DO...
-                    logger.warning('file type not displayable: {}'.format(path))
+                    logger.warning('file type not displayable: {}'.format(path));
             else:
-                logger.warning('no data loaded')
+                logger.warning('no data loaded');

@@ -95,7 +95,7 @@ class EasyCombiner(object):
         logger.info(f'{operand.dtype} flat divided to {len(self._images)} images')
         return self
 
-    def process_ccd(self, master_bias, master_dark, master_flat, exposure_key = 'EXPTIME'):
+    def reduce(self, master_bias, master_dark, master_flat, exposure_key = 'EXPTIME'):
         for i in range(0, len(self._images)):
             self._images[i] = ccd_process(ccd = self._images[i], 
                 oscan = None, 
