@@ -1,11 +1,5 @@
 """
- EASYVIEWER - FIT files UI browser based on jupyter IPYWIDGETS
- UI Panels : 
-         1. TOP : browse files / display selected file infos
-         2. DOWN : 
-                   a : image (JDA imviz)
-                   b : spectra (JDA specviz)
-
+ EASYVIEWER - FIT files UI browser based on jupyter IPYWIDGETS and JWST JDA viewer
  usage :
         viewer = EasyViewer(root_path, cuts, colormap)
 
@@ -53,8 +47,6 @@ class EasyViewer(object):
         self.cuts = cuts
         self.colormap = colormap
         self.selected_file = ''
-        self.primary_data = np.random.randint(0, 256, size=(256, 256))           
-        self.saved_data = self.primary_data.copy()
         
         ### create all GUI components
         self.__create_logger_gui()
@@ -193,11 +185,9 @@ class EasyViewer(object):
         """        
         if (self.dir_select.selected_path is not None) and (change['new'] is not None):
             self.selected_file = self.dir_select.selected_path + os.sep + change['new']
-            self.fit_header.value = str(files_utils.get_file_info(self.selected_file))
+            self.fit_header.value, self.naxis = files_utils.get_file_info(self.selected_file)
             logger.info('Selected file : {}'.format(self.selected_file))
-            self.naxis, self.primary_data = files_utils.get_file_data(self.selected_file)
-            self.saved_data = self.primary_data.copy()
-            self.display_file(self.selected_file)
+            self.display_file(self.selected_file);
         else:
             logger.debug('No file selected');
 
@@ -210,37 +200,38 @@ class EasyViewer(object):
             ### a directory or no image selected yet 
             logger.warning('No image selected')
         else:
-            if self.primary_data is not None:
+            #if self.primary_data is not None:
                 if self.naxis == 2:
                     ### this is an image - use imviz 
                     logger.info('showing image: {}'.format(path))
-                    logger.info('image size: {}'.format(self.primary_data.shape))
-                    logger.info('image stats: min = {}, max = {}, std = {}, mean = {}'.format(
-                            self.primary_data.min(), 
-                            self.primary_data.max(), 
-                            self.primary_data.std(), 
-                            self.primary_data.mean()
+                    self.imviz.load_data(path, data_label = os.path.basename(path))
+                    self.imviz.default_viewer.cuts = self.cuts
+                    self.imviz.default_viewer.set_colormap(self.colormap)
+                    primary_data = self.imviz.get_data(data_label = os.path.basename(path) + '[PRIMARY,1]')
+                    logger.info('image size: {}'.format(primary_data.shape))
+                    logger.info('image stats: min = {}, max = {}, mean = {}'.format(
+                            primary_data.min(), 
+                            primary_data.max(), 
+                            primary_data.mean()
                         )
                     )
-                    self.imviz.load_data(self.primary_data, data_label=os.path.basename(path))
-                    self.imviz.default_viewer.cuts = self.cuts
-                    self.imviz.default_viewer.set_colormap(self.colormap);
+
                 elif self.naxis == 1:
                     ### this is a spectrum - use specviz
                     logger.info('showing spectrum: {}'.format(path))
-                    logger.info('spectrum stats: min = {}, max = {}, std = {}, mean = {}'.format(
-                            self.primary_data.min(), 
-                            self.primary_data.max(), 
-                            self.primary_data.std(), 
-                            self.primary_data.mean()
+                    primary_data = Spectrum1D.read(path)  
+                    logger.info('spectrum stats: min = {}, max = {}, mean = {}'.format(
+                            primary_data.min(), 
+                            primary_data.max(), 
+                            primary_data.mean()
                         )
                     )
-                    fitdata = Spectrum1D.read(path)  
-                    _spec1d = Spectrum1D(spectral_axis = fitdata.wavelength, flux = fitdata.flux * u.adu)
-                    self.specviz.load_data(_spec1d, data_label = os.path.basename(path));
+
+                    _spec1d = Spectrum1D(spectral_axis = primary_data.wavelength, flux = primary_data.flux * u.adu)
+                    self.specviz.load_data(_spec1d, data_label = os.path.basename(path))
             
                 else:
                     ### more naxis options TO DO...
-                    logger.warning('file type not displayable: {}'.format(path));
-            else:
-                logger.warning('no data loaded');
+                    logger.warning('file type not displayable: {}'.format(path))
+            #else:
+                #logger.warning('no data loaded');

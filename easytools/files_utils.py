@@ -35,27 +35,26 @@ class files_utils:
         """ 
         returns a list of files under a path, reverse sorted by last modified time
         """ 
-        #return [str(i).split(os.sep)[-1] for i in sorted(pathlib.Path(path).iterdir(), key = os.path.getmtime, reverse = True)]
         return fnmatch.filter((str(i).split(os.sep)[-1] 
             for i in sorted(pathlib.Path(path).iterdir(), key = os.path.getmtime, reverse = True)), name)
 
-
     @staticmethod
-    def get_file_info(path: str) -> str:
+    def get_file_info(path: str) -> (str, int):
         """ 
-        returns FIT header if path is a FIT file or 1st lines for .dat/.txt/.csv files
+        returns :
+            - FIT header (if path is a FIT file) or file contents for .dat/.txt/.csv files
+            - naxis for fits files (else naxis = 0)
         """    
         if pathlib.Path(path).suffix in fit_types:       
             try:
-                return (repr(CCDData.read(path, unit = u.adu).header))
-                #with fits.open(path, ignore_missing_simple=True) as hdus:
-                 #   return (repr(hdus[0].header))
+                fit_header = CCDData.read(path, unit = u.adu).header
+                return (repr(fit_header), fit_header['NAXIS'])
             except KeyError:
-                return ('missing KEYS in FIT file')        
+                return ('missing KEYS in FIT file', 0)        
             except IOError as e:
-                return ("I/O error({0})".format(e.args))
+                return ("I/O error({0})".format(e.args), 0)
             except:
-                return ("OS error({0})".format(sys.exc_info()[1]))
+                return ("OS error({0})".format(sys.exc_info()[1]), 0)
                 
         elif pathlib.Path(path).suffix in dat_types:
             try:
@@ -65,9 +64,9 @@ class files_utils:
                         lines += line
                       #  if i == 20:
                        #     break
-                return (lines) # + '\n...\n'
+                return (lines, 0)
             except:
-                return ("Not a DAT file - " + str(sys.exc_info()[1]))
+                return ("Not a DAT file - " + str(sys.exc_info()[1]), 0)
 
         elif pathlib.Path(path).suffix in txt_types:
             try:
@@ -77,22 +76,22 @@ class files_utils:
                         lines += line
                       #  if i == 20:
                        #     break
-                return (lines) # + '\n...\n'
+                return (lines, 0) 
             except:
-                return ("Not a TEXT file - " + str(sys.exc_info()[1]))
+                return ("Not a TEXT file - " + str(sys.exc_info()[1]), 0)
 
         elif pathlib.Path(path).suffix in img_types:
             try:
                 img = plt.imread(path)
-                return (str(img.shape))
+                return (str(img.shape), 0)
             except:
-                return ("Not an image file - " + str(sys.exc_info()[1]))
+                return ("Not an image file - " + str(sys.exc_info()[1]), 0)
                 
         elif pathlib.Path(path).is_dir():
-            return ("Is a directory - press 'change' button to change location")
+            return ("Is a directory", 0)
             
         else:
-            return ("File type not supported : " + pathlib.Path(path).suffix)
+            return ("File type not supported : " + pathlib.Path(path).suffix, 0)
             
     def get_file_data(path: str = None) -> (int, np):
         """ 
