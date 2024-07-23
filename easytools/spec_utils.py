@@ -94,8 +94,8 @@ def show_lines(z, ax = None, rest_frame = True, em_label = True, abs_label = Tru
     {"name" : "Mg I 5183",      "lambda" : 5185.048, "emission": False, "label" : ""},    #triplet high res
     {"name" : "Mg I 5172",      "lambda" : 5174.125, "emission": False, "label" : "Mg I"},
     {"name" : "Mg I 5167",      "lambda" : 5168.762, "emission": False, "label" : ""},
-    {"name" : "D2 (Na I 5889)", "lambda" : 5891.582, "emission": False, "label" : " " },
-    {"name" : "D1 (Na I 5895)", "lambda" : 5897.554, "emission": False, "label" : "D1,2 (Na I)" },
+    {"name" : "D2 (Na I 5889)", "lambda" : 5891.582, "emission": False, "label" : "D2 (Na I)" },
+    {"name" : "D1 (Na I 5895)", "lambda" : 5897.554, "emission": False, "label" : "D1 (Na I)" },
     {"name" : "H-alpha",        "lambda" : 6564.614, "emission": False, "label" : "H$\\alpha$"},
     {"name" : "B (atm O2 6867-6944)", "lambda" : 6867.0, "emission": False, "label" : "atm (O2)"},
     {"name" : "H2O (atm 7168-7394)", "lambda" : 7168.0, "emission": False, "label" : "atm (H2O)"},

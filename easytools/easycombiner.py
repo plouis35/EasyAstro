@@ -237,7 +237,7 @@ class Images(EasyCombiner):
     """
     @classmethod
     def find_files(cls, directory: str, files_filter: str, sort_key: str = 'date-obs') -> List[str]:
-        ic = ImageFileCollection(directory, glob_include=files_filter)
+        ic = ImageFileCollection(directory, glob_include = files_filter)
         ic.sort([sort_key])
         return (ic.files_filtered(include_path=True))
 
@@ -247,7 +247,7 @@ class Images(EasyCombiner):
     """
     @classmethod
     def from_fit(cls, dir: str, filter: str, 
-                 camera_electronic_gain: float = 1.2 * u.electron/u.adu, 
+                 camera_electronic_gain: float = 1.2 * u.electron / u.adu, 
                  camera_readout_noise: float =  2.2 * u.electron):
         
         images = []
