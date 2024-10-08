@@ -39,7 +39,7 @@ class EasyCombiner(object):
     maintains images set array
     max memory is used by ccdproc routines to avoid OOM exceptions when working with large set of big images
     """
-    def __init__(self, images: List[CCDData], max_memory: float = 1e9):
+    def __init__(self, images: List[CCDData], max_memory: float = 4e9):
         self._images = images
         self._memory_limit = max_memory
     """
