@@ -11,7 +11,7 @@ def show_image(image,
                percl=99, percu=None, is_mask=False,
                figsize=(10, 10),
                cmap='viridis', log=False, clip=True,
-               show_colorbar=True, show_ticks=True,
+               show_colorbar=True, show_ticks=False,
                fig=None, ax=None, input_ratio=None):
     """
     Show an image in matplotlib with some basic astronomically-appropriat stretching.
@@ -40,7 +40,7 @@ def show_image(image,
             image_aspect_ratio = image.shape[0] / image.shape[1]
             figsize = (max(figsize) * image_aspect_ratio, max(figsize))
 
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        fig, ax = plt.subplots(1, 1, figsize=figsize, layout = 'constrained')
 
 
     # To preserve details we should *really* downsample correctly and
@@ -90,15 +90,20 @@ def show_image(image,
     else:
         scale_args = dict(norm=norm)
 
-    im = ax.imshow(reduced_data, origin='lower',
-                   cmap=cmap, extent=extent, aspect='equal', **scale_args)
+    im = ax.imshow(reduced_data, origin='lower', cmap=cmap, extent=extent, aspect='equal', **scale_args)
+    ax.set_title(' ')
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    fig.set_label(' ')
 
     if show_colorbar:
         # I haven't a clue why the fraction and pad arguments below work to make
         # the colorbar the same height as the image, but they do....unless the image
         # is wider than it is tall. Sticking with this for now anyway...
         # Thanks: https://stackoverflow.com/a/26720422/3486425
-        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+#        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        fig.colorbar(im, ax=ax, fraction=0.02, pad=0.01)
+        
         # In case someone in the future wants to improve this:
         # https://joseph-long.com/writing/colorbars/
         # https://stackoverflow.com/a/33505522/3486425
