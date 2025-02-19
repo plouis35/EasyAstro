@@ -6,7 +6,7 @@
 - easyplan : display info, field-of-view, altitude of target (USABLE)
 - easyphot : reduce and analyse variable stars (or exoplanet) time series (NOT USABLE - DEMO ONLY)
 
-![Alt text](./screenshot_01.PNG)
+![Alt text](screenshot_01.png)
 
 # Installation:
 - install miniforge3 : https://github.com/conda-forge/miniforge 
