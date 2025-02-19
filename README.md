@@ -1,14 +1,17 @@
 # EasyAstro : a set of astronomy python-based notebooks for amateurs:
-- easyviewer : generic FIT images viewer (USABLE - LEFT TO DO: more file formats to support)
-- easyreduce : images preprocessing (USABLE - LEFT TO DO: better cosmicray removal, RTS noise removal)
-- easyspectrum : long-slit spectrum extract, calibrate and analysis (USABLE - LEFT TO DO : code cleanup, ref. star selection))
-- easyplan : display info, field-of-view, altitude of target (USABLE - LEFT TO DO: more infos to show)
-- easyphot : reduce and analyse variable stars (or exoplanet) time series (NOT STARTED - DEMO ONLY)
+- easyviewer : generic FIT images viewer (USABLE)
+- easyreduce : images preprocessing (USABLE)
+- easyextract : long-slit spectrum extract, calibrate and analysis (USABLE)
+- easyfit : long-slit spectrum analysis (NOT USABLE - JUST STARTED...) 
+- easyplan : display info, field-of-view, altitude of target (USABLE)
+- easyphot : reduce and analyse variable stars (or exoplanet) time series (NOT USABLE - DEMO ONLY)
+
+![Alt text](./screenshot_01.PNG)
 
 # Installation:
 - install miniforge3 : https://github.com/conda-forge/miniforge 
 - create (or reuse your base env) a python environment : $ conda env update --file environment.yml
-- install required packages :  $ pip install -r requirements.txt --upgrade
+- install required packages :  $ pip install -r requirements.txt
 - start jupyter lab (or notebook) : $ jupyter lab
 - open a notebook...
   

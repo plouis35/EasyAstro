@@ -106,6 +106,27 @@ class EasyCombiner(object):
             logger.info('no trimming')
         return self
 
+
+    """
+    trim all frames loaded in this set on an y-axis position and percentage
+    """        
+    def y_crop(self, y_crop: str | None):
+        # y_crop contains a tuple: y_pos for relative y center, y_ratio for relative crop arround this y center
+        y_center = 0.5      # default to middle
+        y_ratio = 0.3       # default to 30%
+    
+        if y_crop is not None:
+            y_center, y_ratio= eval(y_crop)
+
+        if y_crop is not None:
+            for i in range(0, len(self._images)):
+                x1, x2, y1, y2 = Images.compute_crop(self._images[i], y_center, y_ratio)
+                self._images[i] = trim_image(self._images[i][y1:y2, x1:x2])
+            logger.info(f"{len(self._images)} science images y-cropped to {y1=}, {y2=}")
+        else:
+            logger.info('no y-cropping to do')
+        return self
+    
     """
     add a scalar to all frames loaded in this set
     """
@@ -252,11 +273,12 @@ class Images(EasyCombiner):
         
         images = []
         for fp in Images.find_files(directory = dir, files_filter = filter):
-            images.append(create_deviation(CCDData.read(fp, unit = u.adu),
-                                           gain = camera_electronic_gain,
-                                           readnoise = camera_readout_noise,
-                                           disregard_nan = True
-                                          ))
+            #images.append(create_deviation(CCDData.read(fp, unit = u.adu),
+             #                              gain = camera_electronic_gain,
+              #                             readnoise = camera_readout_noise,
+               #                            disregard_nan = True
+                #                          ))
+            images.append(CCDData.read(fp, unit = u.Unit('adu')))
             logger.info(f'image : {fp} loaded')
         return cls(images)
 
@@ -283,5 +305,25 @@ class Images(EasyCombiner):
         images = []
         ### TODO ...
         return cls(images)
+
+    @classmethod
+    def compute_crop(cls, img:CCDData, y_center: float = 0.5, y_ratio: float = 0.3) -> tuple[float, float, float, float]:
+        """
+        compute array coords to crop to
+
+        Args:
+            img (CCDData): image to crop
+            y_center (float, optional): relative center. Defaults to 0.5.
+            y_ratio (float, optional): relative y_size. Defaults to 0.4.
+
+        Returns:
+            tuple[float, float, float, float]: x1, x2, y1, y2
+        """            
+
+        x1 = 0
+        x2 = img.shape[1]
+        y1 = round((img.shape[0] * y_center) - ((img.shape[0] * y_ratio) / 2))
+        y2 = round((img.shape[0] * y_center) + ((img.shape[0] * y_ratio) / 2))
+        return x1, x2, y1, y2
 
 

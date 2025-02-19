@@ -38,7 +38,8 @@ def show_image(image,
         if figsize is not None:
             # Rescale the fig size to match the image dimensions, roughly
             image_aspect_ratio = image.shape[0] / image.shape[1]
-            figsize = (max(figsize) * image_aspect_ratio, max(figsize))
+            #figsize = (max(figsize) * image_aspect_ratio, max(figsize))
+            figsize = (8, 5)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize, layout = 'constrained')
 
