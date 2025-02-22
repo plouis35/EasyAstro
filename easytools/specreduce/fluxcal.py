@@ -215,32 +215,34 @@ class FluxCalibration(SpecreduceOperation):
         obj_wave, obj_flux = spec.spectral_axis, spec.flux
 
         # Automatically exclude some lines b/c resolution dependent response
-        badlines = np.array(badlines, dtype='float64')  # Balmer lines
+        badlines = np.array(badlines, dtype='float')  # Balmer lines
 
         # Down-sample (ds) the observed flux to the standard's bins
 
         #plouis 
-        width = standard.wavelength[1] - standard.wavelength[0]
-        #obj_flux_ds = obj_flux.value
-        #obj_wave_ds = standard.wavelength.value
-        #std_flux_ds = standard.flux.value
+        width = (standard.wavelength[1] - standard.wavelength[0])
 
-        obj_flux_ds = np.array([], dtype=np.float64)    # plouis --> float --> float64
-        obj_wave_ds = np.array([], dtype=np.float64)
-        std_flux_ds = np.array([], dtype=np.float64)
-        
+        obj_flux_ds = np.array([], dtype='float')    # plouis --> float --> float64
+        obj_wave_ds = np.array([], dtype='float')
+        std_flux_ds = np.array([], dtype='float')
+
         for i in range(len(standard.flux)):
             rng = np.where((obj_wave.value >= standard.wavelength[i].value - width.value) &     #- standard['width'][i] / 2.0) &
                            (obj_wave.value < standard.wavelength[i].value + width.value))[0]   # + standard['width'][i] / 2.0))[0]
-
+            
             IsH = np.where((badlines >= standard.wavelength[i].value - width.value) &  # - standard['width'][i] / 2.0) &
                            (badlines < standard.wavelength[i].value + width.value))[0] #+ standard['width'][i] / 2.0))[0]
-
+            
             # Does this bin contain observed spectra, and no Balmer lines?
             if (len(rng) > 1) and (len(IsH) == 0):
+                #obj_flux_ds = np.append(obj_flux_ds, np.nanmean(obj_flux.value[rng]))
+                #obj_wave_ds = np.append(obj_wave_ds, standard['wave'][i])
+                #std_flux_ds = np.append(std_flux_ds, standard['flux'][i])
+
                 obj_flux_ds = np.append(obj_flux_ds, np.nanmean(obj_flux.value[rng]))
                 obj_wave_ds = np.append(obj_wave_ds, standard.wavelength[i].value)
                 std_flux_ds = np.append(std_flux_ds, standard.flux[i].value)
+
         
         # the ratio between the standard star catalog flux and observed flux
         ratio = np.abs(std_flux_ds / obj_flux_ds)
