@@ -1,10 +1,9 @@
-# EasyAstro : a set of astronomy python-based notebooks for amateurs:
+# EasyAstro : a set of spectroscopy python-based notebooks for amateurs:
 - easyviewer : generic FIT images viewer (USABLE)
 - easyreduce : images preprocessing (USABLE)
-- easyextract : long-slit spectrum extract, calibrate and analysis (USABLE)
+- easyextract : long-slit spectrum extract and calibrate (USABLE)
 - easyfit : long-slit spectrum analysis (USABLE) 
 - easyplan : display info, field-of-view, altitude of target (USABLE)
-- easyphot : reduce and analyse variable stars (or exoplanet) time series (NOT USABLE - DEMO ONLY)
 
 ![Alt text](screenshot_01.png)
 
